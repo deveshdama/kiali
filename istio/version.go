@@ -160,13 +160,21 @@ func getLocalIstiodURL(ctx context.Context, conf *config.Config, controlPlane mo
 
 	// In case the monitoring port is not the default, use the port from the service.
 	port := defaultMonitoringPort
+	portFound := false
 	if services[0].Spec.Ports != nil {
 		for _, p := range services[0].Spec.Ports {
 			if p.Name == monitoringPortName {
 				port = int(p.Port)
+				portFound = true
 				break
 			}
 		}
+	}
+
+	if !portFound {
+		// Service doesn't expose the monitoring port (e.g. AppLink istiod).
+		// Caller will fall back to pod port-forwarding with MonitoringPort.
+		return "", fmt.Errorf("service [%s] does not expose port named [%s]", services[0].Name, monitoringPortName)
 	}
 
 	url := "http://" + services[0].Name

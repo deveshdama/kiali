@@ -21,4 +21,5 @@ const (
 	certificateName                       = "root-cert.pem"
 	monitoringPortName                    = "http-monitoring"
 	defaultMonitoringPort                 = 15014 // Default monitoring port for istiod
+	defaultHttpPort                       = 8080  // Default HTTP debug port for istiod (--httpAddr)
 )

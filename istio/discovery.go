@@ -886,6 +886,7 @@ func newControlPlane(istiod appsv1.Deployment, cluster *models.KubeCluster) mode
 		Cluster:         cluster,
 		Labels:          istiod.Labels,
 		MeshConfig:      models.NewMeshConfig(),
+		HttpPort:        defaultHttpPort,        // Default HTTP port, will be overridden by parseArgsInto if --httpAddr is found
 		MonitoringPort:  defaultMonitoringPort, // Default monitoring port, will be overridden by parseArgsInto if --monitoringAddr is found
 		IstiodName:      istiod.Name,
 		IstiodNamespace: istiod.Namespace,
@@ -1171,12 +1172,12 @@ func (in *Discovery) canConnectToIstiodForRevision(controlPlane models.ControlPl
 	})
 	istiodPod := GetLatestPod(istiodPods)
 	status := kubernetes.ComponentHealthy
-	// The 8080 port is not accessible from outside of the pod. However, it is used for kubernetes to do the live probes.
+	// The HTTP port (--httpAddr, default 8080) is not accessible from outside of the pod. However, it is used for kubernetes to do the live probes.
 	// Using the proxy method to make sure that K8s API has access to the Istio Control Plane namespace.
 	// By proxying one Istiod, we ensure that the following connection is allowed:
 	// Kiali -> K8s API (proxy) -> istiod
 	// This scenario is not obvious for private clusters (like GKE private cluster)
-	if _, err := client.ForwardGetRequest(istiodPod.Namespace, istiodPod.Name, 8080, "/ready"); err != nil {
+	if _, err := client.ForwardGetRequest(istiodPod.Namespace, istiodPod.Name, controlPlane.HttpPort, "/ready"); err != nil {
 		log.Warningf("Unable to get ready status of istiod: %s/%s. Err: %s", istiodPod.Namespace, istiodPod.Name, err)
 		status = kubernetes.ComponentUnreachable
 	}
@@ -1199,6 +1200,7 @@ func parseArgsInto(args []string, controlPlane *models.ControlPlane) {
 	flagSet.ParseErrorsAllowlist.UnknownFlags = true
 
 	monitoringAddr := flagSet.String("monitoringAddr", "", "Monitoring address in format :port")
+	httpAddr := flagSet.String("httpAddr", "", "HTTP address in format :port")
 
 	if err := flagSet.Parse(args); err != nil {
 		log.Debugf("Unable to parse args from control plane: %s", err)
@@ -1214,6 +1216,18 @@ func parseArgsInto(args []string, controlPlane *models.ControlPlane) {
 			}
 		} else {
 			log.Debugf("Invalid --monitoringAddr format '%s', expected 'host:port' or ':port'. Using default port %d: %s", *monitoringAddr, defaultMonitoringPort, err)
+		}
+	}
+
+	if *httpAddr != "" {
+		if _, port, err := net.SplitHostPort(*httpAddr); err == nil {
+			if portNum, err := strconv.Atoi(port); err == nil {
+				controlPlane.HttpPort = portNum
+			} else {
+				log.Debugf("Invalid --httpAddr port '%s', expected valid port number. Using default port %d: %s", port, defaultHttpPort, err)
+			}
+		} else {
+			log.Debugf("Invalid --httpAddr format '%s', expected 'host:port' or ':port'. Using default port %d: %s", *httpAddr, defaultHttpPort, err)
 		}
 	}
 }
