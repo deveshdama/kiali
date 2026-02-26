@@ -197,37 +197,38 @@ func GetVersion(ctx context.Context, conf *config.Config, client kubernetes.Clie
 	// http monitoring port (usually 15014) is not exposed publicly.
 	if conf.RunMode != config.RunModeLocal && client.ClusterInfo().Name == conf.KubernetesConfig.ClusterName {
 		url, err := getLocalIstiodURL(ctx, conf, controlPlane, kubeCache)
-		if err != nil {
-			return nil, err
-		}
-
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, err := io.ReadAll(resp.Body)
-			// Try and read the body here in case the error message is useful.
+		if err == nil {
+			req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 			if err != nil {
-				return nil, fmt.Errorf("getting istio version returned error code: [%d]", resp.StatusCode)
+				return nil, err
 			}
-			return nil, fmt.Errorf("getting istio version returned error code: [%d]. body: %s", resp.StatusCode, body)
-		}
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("invalid response from istio getting version: %s", body)
-		}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return nil, err
+			}
+			defer resp.Body.Close()
 
-		rawVersion := string(body)
-		return parseRawIstioVersion(rawVersion), nil
+			if resp.StatusCode != http.StatusOK {
+				body, err := io.ReadAll(resp.Body)
+				// Try and read the body here in case the error message is useful.
+				if err != nil {
+					return nil, fmt.Errorf("getting istio version returned error code: [%d]", resp.StatusCode)
+				}
+				return nil, fmt.Errorf("getting istio version returned error code: [%d]. body: %s", resp.StatusCode, body)
+			}
+
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("invalid response from istio getting version: %s", body)
+			}
+
+			rawVersion := string(body)
+			return parseRawIstioVersion(rawVersion), nil
+		}
+		// If the service URL couldn't be built (e.g. missing http-monitoring port),
+		// fall through to the pod port-forward path below.
+		log.Debugf("Unable to build local istiod URL, falling back to port-forward: %s", err)
 	}
 
 	istiods, err := GetHealthyIstiodPods(kubeCache, controlPlane.Revision, controlPlane.IstiodNamespace)
