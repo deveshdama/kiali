@@ -8,9 +8,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
-
 	"k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/kiali/kiali/business"
 	"github.com/kiali/kiali/config"
 	"github.com/kiali/kiali/grafana"
@@ -155,6 +153,12 @@ func BuildMeshMap(ctx context.Context, o mesh.Options, gi *mesh.GlobalInfo) (mes
 
 		// add any Kiali instances
 		for _, ki := range cp.Cluster.KialiInstances {
+			// Only show Kiali instances in accessible namespaces
+			kiKey := mesh.GetClusterSensitiveKey(cp.Cluster.Name, ki.Namespace)
+			if _, ok := o.AccessibleNamespaces[kiKey]; !ok {
+				log.Tracef("No access for Kiali instance %s/%s in %s cluster", ki.Namespace, ki.ServiceName, cp.Cluster.Name)
+				continue
+			}
 			kiali, _, err := addInfra(meshMap, mesh.InfraTypeKiali, cp.Cluster.Name, ki.Namespace, ki.ServiceName, es.Istio, ki.Version, false, "")
 			mesh.CheckError(err)
 
