@@ -440,6 +440,9 @@ type TracingConfig struct {
 //	a multi-control-plane deployment.
 type IstioConfig struct {
 	ComponentStatuses              ComponentStatuses `yaml:"component_status,omitempty" json:"componentStatuses,omitempty"`
+	// ExcludedControlPlaneNamespaces is a list of namespaces to exclude from istiod control plane discovery.
+	// Any istiod deployment found in these namespaces will be ignored by Kiali.
+	ExcludedControlPlaneNamespaces []string          `yaml:"excluded_control_plane_namespaces,omitempty" json:"excludedControlPlaneNamespaces,omitempty"`
 	GatewayAPIClasses              []GatewayAPIClass `yaml:"gateway_api_classes,omitempty" json:"gatewayApiClasses,omitempty"`
 	GatewayAPIClassesLabelSelector string            `yaml:"gateway_api_classes_label_selector,omitempty" json:"gatewayApiClassesLabelSelector,omitempty"`
 	IstioAPIEnabled                bool              `yaml:"istio_api_enabled" json:"istioApiEnabled"`
@@ -527,6 +530,9 @@ type KubernetesConfig struct {
 	// ClusterName is the name of the kubernetes cluster that Kiali is running in.
 	// If empty, then it will default to 'Kubernetes'.
 	ClusterName string `yaml:"cluster_name,omitempty"`
+	// List of workload names that will be excluded from the workload list in the UI.
+	// Workloads matching these names (exact match) will be filtered out from all namespace views.
+	ExcludeWorkloadNames []string `yaml:"excluded_workload_names,omitempty"`
 	// List of controllers that won't be used for Workload calculation
 	// Kiali queries Deployment,ReplicaSet,ReplicationController,DeploymentConfig,StatefulSet,Job and CronJob controllers
 	// Deployment and ReplicaSet will be always queried, but ReplicationController,DeploymentConfig,StatefulSet,Job and CronJobs
