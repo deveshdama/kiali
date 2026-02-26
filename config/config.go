@@ -443,6 +443,11 @@ type IstioConfig struct {
 	// ExcludedControlPlaneNamespaces is a list of namespaces to exclude from istiod control plane discovery.
 	// Any istiod deployment found in these namespaces will be ignored by Kiali.
 	ExcludedControlPlaneNamespaces []string          `yaml:"excluded_control_plane_namespaces,omitempty" json:"excludedControlPlaneNamespaces,omitempty"`
+	// IncludedControlPlaneNamespaces is a list of namespaces to include in istiod control plane discovery.
+	// When set, only istiod deployments in these namespaces will be visible to Kiali.
+	// This takes precedence over ExcludedControlPlaneNamespaces. If empty, all namespaces are included
+	// (subject to ExcludedControlPlaneNamespaces filtering).
+	IncludedControlPlaneNamespaces []string          `yaml:"included_control_plane_namespaces,omitempty" json:"includedControlPlaneNamespaces,omitempty"`
 	GatewayAPIClasses              []GatewayAPIClass `yaml:"gateway_api_classes,omitempty" json:"gatewayApiClasses,omitempty"`
 	GatewayAPIClassesLabelSelector string            `yaml:"gateway_api_classes_label_selector,omitempty" json:"gatewayApiClassesLabelSelector,omitempty"`
 	IstioAPIEnabled                bool              `yaml:"istio_api_enabled" json:"istioApiEnabled"`

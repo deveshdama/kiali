@@ -527,11 +527,19 @@ func (in *Discovery) Mesh(ctx context.Context) (*models.Mesh, error) {
 			return nil, err
 		}
 
-		// Filter out istiod deployments in excluded namespaces
+		// Filter istiod deployments based on included/excluded namespaces.
+		// included_control_plane_namespaces takes precedence — if set, only those namespaces are visible.
+		// Otherwise, excluded_control_plane_namespaces is applied.
+		includedNamespaces := in.conf.ExternalServices.Istio.IncludedControlPlaneNamespaces
 		excludedNamespaces := in.conf.ExternalServices.Istio.ExcludedControlPlaneNamespaces
 		var istiods []appsv1.Deployment
 		for _, d := range depList.Items {
-			if sliceutil.Some(excludedNamespaces, func(ns string) bool { return ns == d.Namespace }) {
+			if len(includedNamespaces) > 0 {
+				if !sliceutil.Some(includedNamespaces, func(ns string) bool { return ns == d.Namespace }) {
+					log.Infof("Excluding controlplane [%s/%s] on cluster [%s] (namespace not in included_control_plane_namespaces).", d.Name, d.Namespace, cluster.Name)
+					continue
+				}
+			} else if sliceutil.Some(excludedNamespaces, func(ns string) bool { return ns == d.Namespace }) {
 				log.Infof("Excluding controlplane [%s/%s] on cluster [%s] (namespace is in excluded_control_plane_namespaces).", d.Name, d.Namespace, cluster.Name)
 				continue
 			}
