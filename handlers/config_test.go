@@ -298,9 +298,10 @@ func TestConfigHandlerAmbientEnabledChecksAllClusters(t *testing.T) {
 	conf.KubernetesConfig.ClusterName = "mgmt-cluster"
 	conf.Clustering.IgnoreHomeCluster = true
 
-	// Home cluster: no ztunnel (management cluster).
+	// Home cluster: bare management cluster (no ztunnel, no Gateway API).
 	homeClient := kubetest.NewFakeK8sClient()
-	// Remote cluster: has a ztunnel DaemonSet (ambient enabled).
+	homeClient.GatewayAPIEnabled = false
+	// Remote cluster: has a ztunnel DaemonSet (ambient enabled) and Gateway API.
 	remoteClient := kubetest.NewFakeK8sClient(
 		kubetest.FakeNamespace("istio-system"),
 		&apps_v1.DaemonSet{
@@ -316,6 +317,7 @@ func TestConfigHandlerAmbientEnabledChecksAllClusters(t *testing.T) {
 			},
 		},
 	)
+	remoteClient.GatewayAPIEnabled = true
 
 	clients := map[string]kubernetes.UserClientInterface{
 		"mgmt-cluster": homeClient,
@@ -345,4 +347,13 @@ func TestConfigHandlerAmbientEnabledChecksAllClusters(t *testing.T) {
 	var confResp handlers.PublicConfig
 	require.NoError(json.Unmarshal(actual, &confResp))
 	require.True(confResp.AmbientEnabled, "ambientEnabled should be true when a remote cluster has ztunnel")
+
+	var hasWaypoint bool
+	for _, gwClass := range confResp.GatewayAPIClasses {
+		if gwClass.ClassName == "istio-waypoint" {
+			hasWaypoint = true
+			break
+		}
+	}
+	require.True(hasWaypoint, "GatewayAPIClasses should include istio-waypoint when a remote cluster has ztunnel")
 }

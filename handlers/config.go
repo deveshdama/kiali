@@ -178,7 +178,18 @@ func Config(conf *config.Config, cache cache.KialiCache, discovery istio.MeshDis
 			accessibleClusters = append(accessibleClusters, clusterName)
 		}
 		publicConfig.AmbientEnabled = cache.IsAmbientEnabledInAnyCluster(accessibleClusters)
-		publicConfig.GatewayAPIClasses = cache.GatewayAPIClasses(conf.KubernetesConfig.ClusterName)
+		// Aggregate gateway API classes across all accessible clusters so
+		// that default classes like istio-waypoint are included even when
+		// the home cluster lacks Gateway API CRDs or ztunnel.
+		seenClasses := make(map[string]bool)
+		for _, cluster := range accessibleClusters {
+			for _, gwClass := range cache.GatewayAPIClasses(cluster) {
+				if !seenClasses[gwClass.ClassName] {
+					seenClasses[gwClass.ClassName] = true
+					publicConfig.GatewayAPIClasses = append(publicConfig.GatewayAPIClasses, gwClass)
+				}
+			}
+		}
 
 		// Fetch the list of all clusters in the mesh
 		// One usage of this data is to cross-link Kiali instances, when possible.

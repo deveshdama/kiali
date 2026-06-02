@@ -699,7 +699,11 @@ func (c *kialiCacheImpl) GatewayAPIClasses(cluster string) []config.GatewayAPICl
 		if len(c.clients) > 1 {
 			result = append(result, config.GatewayAPIClass{Name: "istio-east-west", ClassName: "istio-east-west"})
 		}
-		if c.IsAmbientEnabled(cluster) {
+		allClusters := make([]string, 0, len(c.clients))
+		for name := range c.clients {
+			allClusters = append(allClusters, name)
+		}
+		if c.IsAmbientEnabledInAnyCluster(allClusters) {
 			result = append(result, config.GatewayAPIClass{Name: "istio-waypoint", ClassName: "istio-waypoint"})
 		}
 	}
