@@ -115,7 +115,6 @@ create_resources_in_remote_cluster() {
       --set deployment.cluster_wide_access=true             \
       --set deployment.view_only_mode=${VIEW_ONLY}          \
       --set auth.strategy=anonymous                         \
-      --repo https://kiali.org/helm-charts                  \
       kiali-server                                          \
       ${KIALI_SERVER_HELM_CHARTS})"
 
